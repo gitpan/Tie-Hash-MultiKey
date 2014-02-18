@@ -1,5 +1,10 @@
 Revision history for Perl extension Tie::Hash::MultiKey
 
+0.03  Tue Feb 18 04:12:19 PST 2014
+	add normalization in test routines for reference 
+	dumps so that different versions of perl do not 
+	produce different test results
+
 0.02  Tue Feb 18 02:22:57 PST 2014
 	update documentation
 

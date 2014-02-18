@@ -18,6 +18,58 @@ sub ok {
   ++$test;
 }
 
+# add
+#
+# $var = text of some reference
+# $var = normalize($var);
+#
+# for pre conversion
+#
+# $var = some reference
+# rebuild($var);	# converts all the references
+#
+
+my $debug = 0;
+
+sub live {
+  (my $var = shift) =~ s/^\d+\s+=//;
+  eval "$var";
+}
+
+sub rebuild {
+  return if $debug;
+  my $self = shift;
+  my($kh,$vh,$sh) = @{$self};
+  my %seen;
+  my $i = 0;
+  my $nkh;
+  foreach (sort keys %$kh) {
+    my $v = $kh->{$_};
+    unless (exists $seen{$v}) {
+      $seen{$v} = $i++
+    }
+    $nkh->{$_} = $seen{$v};
+  }
+  $self->[0] = $nkh;
+  my $nvh = {};		# new value hash
+  my $nsh = {};		# new shared key hash
+  while (my($k,$v) = each %$vh) {
+    $nvh->{$seen{$k}} = $v;
+  }
+  $self->[1] = $nvh;
+  while (my($k,$v) = each %$sh) {
+    map { $v->{$_} = 1 } keys %$v;
+    $nsh->{$seen{$k}} = $v;
+  }
+  $self->[2] = $nsh;
+}
+
+sub normalize {
+  return shift if $debug;
+  my $self = live(shift);
+  rebuild($self);
+  scalar $dd->DumperA($self);
+}
 my %h;
 tie %h, 'Tie::Hash::MultiKey';
 
@@ -51,7 +103,9 @@ $exp = q|8	= bless([{
 	},
 1,], 'Tie::Hash::MultiKey');
 |;
+$exp = normalize($exp);
 $got = $dd->DumperA(tied %h);  
+$got = normalize($exp);
 print "got: $got\nexp: $exp\nnot "
         unless $got eq $exp;
 &ok;
@@ -81,7 +135,9 @@ $exp = q|12	= bless([{
 	},
 1,], 'Tie::Hash::MultiKey');
 |;
+$exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
+$got = normalize($got);
 print "got: $got\nexp: $exp\nnot "
         unless $got eq $exp;
 &ok;

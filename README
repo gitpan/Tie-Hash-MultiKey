@@ -4,8 +4,8 @@ NAME
 SYNOPSIS
       use Tie::Hash::MultiKey;
 
-      $accessor = tie %hash, qw(Tie::Hash::MultiValue);
-      $accessor = tied %hash;
+      $thm = tie %hash, qw(Tie::Hash::MultiValue);
+      $thm = tied %hash;
 
       untie %hash;
 
@@ -37,7 +37,7 @@ SYNOPSIS
 
       All of the above methods can be accessed as:
 
-      i.e.  $accessor->consolidate;
+      i.e.  $thm->consolidate;
 
 DESCRIPTION
     Tie::Hash::MultiKey creates hashes that can have multiple keys for a
@@ -75,14 +75,14 @@ DESCRIPTION
 
     This construct is ALWAYS safe.
 
-    * $acc = tie %hash,'Tie::Hash::MultiValue';
+    * $thm = tie %hash,'Tie::Hash::MultiValue';
         Ties a %hash to this package for enhanced capability and returns a
         method pointer.
 
           my %hash;
-          my $accessor = tie %hash,'Tie::Hash::MultiValue';
+          my $thm = tie %hash,'Tie::Hash::MultiValue';
 
-    * $acc = tied %hash;
+    * $thm = tied %hash;
         Returns a method pointer for this package.
 
     * untie %hash;
