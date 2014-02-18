@@ -1,0 +1,14 @@
+Revision history for Perl extension Math::BigInt::Slim
+
+1031.997	Feb 16 18:27:50 PST 2014
+	clean up documentation for public release
+
+1021.997	Sun Feb 16 18:01:01 PST 2014
+	renamed newb10 to new
+
+1011.997	Sun Feb 16 17:48:16 PST 2014
+	update documentation and remove unused code
+
+1001.997	Sun Feb 16 17:37:05 PST 2014
+	beta version
+	this version number is 100, based on Math::BigInt version 1.997

@@ -1,0 +1,15 @@
+Changes
+MANIFEST
+MANIFEST.SKIP
+README
+Makefile.PL
+MultiKey.pm
+t/accessor.t
+t/add_store_aref.t
+t/add_store_array.t
+t/advanced.t
+t/flip.t
+t/multi_as_aref.t
+t/multi_as_array.t
+
+META.yml                                 Module meta-data (added by MakeMaker)

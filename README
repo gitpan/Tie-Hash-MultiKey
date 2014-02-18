@@ -1,0 +1,239 @@
+NAME
+    Tie::Hash::MultiKey - multiple keys per value
+
+SYNOPSIS
+      use Tie::Hash::MultiKey;
+
+      $accessor = tie %hash, qw(Tie::Hash::MultiValue);
+      $accessor = tied %hash;
+
+      $hash{'foo'}        = 'baz';
+            or
+      $hash{'foo', 'bar'} = 'baz';
+            or
+      $array_ref = ['foo', 'bar'];
+      $hash{ $array_ref } = 'baz';
+
+      print $hash{foo};     # prints 'baz'
+      print $hash{bar};     # prints 'baz'
+
+      $array_ref = ['fuz','zup'];
+      $val = tied(%hash)->addkey('fuz' => 'bar');
+      $val = tied(%hash)->addkey('fuz','zup' => 'bar');
+      $val = tied(%hash)->addkey( $array_ref => 'bar');
+
+      print $hash{fuz}      # prints 'baz'
+
+      $array_ref = ['foo', 'bar'];
+      $val = tied(%hash)->remove('foo');
+      $val = tied(%hash)->remove('foo', 'bar');
+      $val = tied(%hash)->remove( $array_ref );
+
+      @list = tied(%hash)->keylist('foo')
+
+      $num_vals = tied(%hash)->consolidate;
+
+      All of the above methods can be accessed as:
+
+      i.e.  $accessor->consolidate;
+
+DESCRIPTION
+    Tie::Hash::MultiKey creates hashes that can have multiple keys for a
+    single value. As shown in the SYNOPSIS, multiple keys share a common
+    value.
+
+    Additional keys can be added that share the same value and keys can be
+    removed without deleting other keys that share that value.
+
+    STORE..ing a value for one or more keys that already exist will
+    overwrite the existing value and add any missing keys to the key group
+    for that value.
+
+    WARNING: multiple key values supplied as an ARRAY to STORE and DELETE
+    operations are passed by Perl as a single string separated by the $;
+    multidimensional array seperator. i.e.
+
+            $hash{'a','b','c'} = $something;
+      or
+            @keys = ('a','b','c');
+            $hash{@keys} = $something'
+
+    This really means $hash{join($;, 'a','b','c')};
+
+    Tie::Hash::MultiKey will do the right thing as long as your keys DO NOT
+    contain binary data the may include the $; separator character.
+
+    It is recommended that you use the ARRAY_REF construct to supply
+    multiple keys for binary data. i.e.
+
+            $hash{['a','b','c']} = $something;
+      or
+            $keys = ['a','b','c'];
+            $hash{$keys} = $something;
+
+    This construct is ALWAYS safe.
+
+    * $val = ->addkey('new_key' => 'existing_key');
+        Add one or more keys to the shared key group for a particular value.
+
+          input:        array or array_ref,
+                        existing_key
+          returns:      hash value
+                    or  dies with stack trace
+
+        Dies with stack trace if existing_key does not exist OR if new key
+        belongs to another key set.
+
+        Arguments may be a single SCALAR, ARRAY, or ARRAY_REF
+
+    * $val = ->remove('key');
+        Remove one or more keys from the shared key group for a particular
+        value If this operation removes the LAST key, then it performs a
+        DELETE which is the same as:
+
+                delete $hash{key};
+
+        remove returns a reverse list of the removed value's by key
+
+          i.e.  @val = remove(something);
+           or   $val = remove(something);
+
+        Arguments may be a single SCALAR, ARRAY or ARRAY_REF
+
+    * @list = ->keylist('foo');
+        Returns all the shared keys for KEY 'foo', including 'foo'
+
+          input:        key
+          returns:      @shared_keys
+
+    * ->consolidate;
+        USE WITH CAUTION
+
+        This method consolidates all keys with a common values.
+
+          returns: number of consolidated key groups
+
+COMMON OPERATIONS
+    A tied multikey %hash behave like a regular %hash for most operations;
+
+      B<$value = $hash{$key}> returns the key group value
+
+      B<$hash{$key} = $value> sets the value for the key group
+      i.e. all keys in the group will return that value
+
+      B<$hash{$key1,$key2} = $value assigns $value to the key
+      key group consisting of $key1, $key2 if they do not.
+      If at least one of the keys already exists, the remaining
+      keys are assigned to the key group and the value is set
+      for the entire group.
+
+      B<Better> syntax $hash{[$key,$key]} = $value;
+
+      B<delete $hash{$key}> deletes the ENTIRE key group
+      to which B<$key> belongs.
+
+      B<delete $hash($key1,$key2> deletes ALL groups
+      to which $key1 and $key2 belong.
+
+      B<Better> syntax delete $hash{[$key1,$key2]};
+
+      B<keys %hash> returns all keys.
+
+      B<values %hash> returns all values
+      NOTE: that this will not be the same number of
+      items as returned by B<keys> unless there are no
+      key groups containing more than one key.
+
+      B<($k,$v) = each %hash> behaves as expected.
+
+    References to tied %hash behave in the same manner as regular %hash's
+    except as noted for multiple key values above.
+
+LIMITATIONS
+    SLICE operations may produce unusual results. Tie::Hash::MultiKey hashs
+    only accept SCALAR or ARRAY_REF arguments for SLICE and direct
+    assigment.
+
+      i.e.
+            %WRONG = (
+                    one     => 1,
+                    two     => 2,
+                    (3,4,5) => 12 # expands to 3 => 4, 5 => 12
+            );
+
+            %hash = ( # OK
+                    one     => 1,
+                    two     => 2,
+                    [3,4,5] => 12
+            );
+
+    will produce a psuedo hash of the form:
+
+            %hash = (
+                    one     => 1,
+                    two     => 2,
+                    3       => 12, --|
+                    4       => 12, --|
+                    5       => 12  --|
+            );
+
+    where the operation $hash{4} = 99 will change the hash to:
+
+            %hash = (
+                    one     => 1,
+                    two     => 2,
+                    3       => 99, --|
+                    4       => 99, --|
+                    5       => 99  --|
+            );
+
+    Example: $hp = \%hash;
+
+      @{$hp}{'one','two','[3,4,5]} = (1,2,12);
+
+    produces the same result as above. If the hash already contains a KEY of
+    the same name, the value will be changed for all other shared keys.
+
+     --------------------------
+
+    If you are using ARRAY_REF's as keys (not as pointers to keys as above)
+    they must be blessed into some other package so that
+
+            ref $key ne 'ARRAY'
+
+    i.e. bless $key, 'KEY'; # or anything other than 'ARRAY'
+
+     --------------------------
+
+    Example SLICE assignments
+
+    TO tied hash
+
+            @tiedhash{@keys} = @values;
+
+            $hp = \%tiedhash;
+            @{$hp}{@keys} =  @values;
+
+    FROM tied hash
+
+            @values = @tiedhash{@keys};
+
+            $hp = \%tiedhash;
+            @values = @{$hp}{@keys};
+
+    NOTE: when assigning TO the hash, keys may be ARRAY_REF's as described
+    above.
+
+AUTHOR
+    Michael Robinton, <miker@cpan.org>
+
+COPYRIGHT
+    Copyright 2014, Michael Robinton
+
+    This program is free software; you may redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
