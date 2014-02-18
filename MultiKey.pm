@@ -5,7 +5,7 @@ use Carp;
 use Tie::Hash;
 use vars qw($VERSION);
 
-$VERSION = do { my @r = (q$Revision: 0.01 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.02 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 =head1 NAME
 
@@ -17,6 +17,8 @@ Tie::Hash::MultiKey - multiple keys per value
 
   $accessor = tie %hash, qw(Tie::Hash::MultiValue);
   $accessor = tied %hash;
+
+  untie %hash;
 
   $hash{'foo'}        = 'baz';
 	or
@@ -220,6 +222,23 @@ sub SCALAR {
 }
 
 =over 4
+
+=item * $acc = tie %hash,'Tie::Hash::MultiValue';
+
+Ties a %hash to this package for enhanced capability and returns a method
+pointer.
+
+  my %hash;
+  my $accessor = tie %hash,'Tie::Hash::MultiValue';
+
+=item * $acc = tied %hash;
+
+Returns a method pointer for this package.
+
+=item * untie %hash;
+
+Breaks the binding between a variable and this package. There is no affect
+if the variable is not tied.
 
 =item * $val = ->addkey('new_key' => 'existing_key');
 

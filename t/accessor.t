@@ -38,7 +38,7 @@ print "got: $got\nexp: $exp\nnot "
 
 # test 3	recheck accessor
 $th = tied %h;
-my $got = $dd->DumperA($th);
+$got = $dd->DumperA($th);
 print "got: $got\nexp: $exp\nnot "
 	unless $got eq $exp;
 &ok;
