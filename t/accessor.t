@@ -1,4 +1,6 @@
 
+# accessor.t
+
 BEGIN { $| = 1; print "1..3\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
@@ -23,13 +25,13 @@ my %h;
 # test 2	check accessor
 my $th = tie %h, 'Tie::Hash::MultiKey';
 
-my $exp = q|4	= bless([{
+my $exp = q|5	= bless([{
 	},
 {
 	},
 {
 	},
-0,], 'Tie::Hash::MultiKey');
+0,0,], 'Tie::Hash::MultiKey');
 |;
 my $got = $dd->DumperA($th);
 print "got: $got\nexp: $exp\nnot "

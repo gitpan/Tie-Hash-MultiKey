@@ -1,5 +1,8 @@
 Revision history for Perl extension Tie::Hash::MultiKey
 
+0.04  Wed Feb 19 01:47:49 PST 2014
+	add ordered key capability
+
 0.03  Tue Feb 18 04:12:19 PST 2014
 	add normalization in test routines for reference 
 	dumps so that different versions of perl do not 

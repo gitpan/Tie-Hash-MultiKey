@@ -1,5 +1,7 @@
 
-BEGIN { $| = 1; print "1..29\n"; }
+# advanced.t
+
+BEGIN { $| = 1; print "1..35\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
 #use diagnostics;
@@ -30,7 +32,7 @@ sub ok {
 # rebuild($var);	# converts all the references
 #
 
-my $debug = 0;
+my $debug = 1;
 
 sub live {
   (my $var = shift) =~ s/^\d+\s+=//;
@@ -76,13 +78,13 @@ my %h;
 tie %h, 'Tie::Hash::MultiKey';
 
 # test 2	check data structure
-my $exp = q|4	= bless([{
+my $exp = q|5	= bless([{
 	},
 {
 	},
 {
 	},
-0,], 'Tie::Hash::MultiKey');
+0,0,], 'Tie::Hash::MultiKey');
 |;
 
 my $got = $dd->DumperA(tied %h);
@@ -97,7 +99,7 @@ $h{'x'} = 'y';
 $h{qw(quick quack quark)} = 'que';
 $h{qw(manny moe jack)} = 'stooges';
 
-$exp = q|38	= bless([{
+$exp = q|39	= bless([{
 		'bar'	=> 0,
 		'dang'	=> 1,
 		'ding'	=> 1,
@@ -124,25 +126,25 @@ $exp = q|38	= bless([{
 			'foo'	=> 0,
 		},
 		'1'	=> {
-			'dang'	=> 1,
-			'ding'	=> 0,
-			'dong'	=> 2,
+			'dang'	=> 3,
+			'ding'	=> 2,
+			'dong'	=> 4,
 		},
 		'2'	=> {
-			'x'	=> 0,
+			'x'	=> 5,
 		},
 		'3'	=> {
-			'quack'	=> 1,
-			'quark'	=> 2,
-			'quick'	=> 0,
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
 		},
 		'4'	=> {
-			'jack'	=> 2,
-			'manny'	=> 0,
-			'moe'	=> 1,
+			'jack'	=> 11,
+			'manny'	=> 9,
+			'moe'	=> 10,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);  
@@ -159,7 +161,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 5	check for deletions
-$exp = q|30	= bless([{
+$exp = q|31	= bless([{
 		'bar'	=> 0,
 		'dang'	=> 1,
 		'ding'	=> 1,
@@ -182,20 +184,20 @@ $exp = q|30	= bless([{
 			'foo'	=> 0,
 		},
 		'1'	=> {
-			'dang'	=> 1,
-			'ding'	=> 0,
-			'dong'	=> 2,
+			'dang'	=> 3,
+			'ding'	=> 2,
+			'dong'	=> 4,
 		},
 		'2'	=> {
-			'x'	=> 0,
+			'x'	=> 5,
 		},
 		'3'	=> {
-			'quack'	=> 1,
-			'quark'	=> 2,
-			'quick'	=> 0,
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -212,7 +214,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 7	check for deletions
-$exp = q|20	= bless([{
+$exp = q|21	= bless([{
 		'dang'	=> 1,
 		'ding'	=> 1,
 		'dong'	=> 1,
@@ -226,17 +228,17 @@ $exp = q|20	= bless([{
 	},
 {
 		'1'	=> {
-			'dang'	=> 1,
-			'ding'	=> 0,
-			'dong'	=> 2,
+			'dang'	=> 3,
+			'ding'	=> 2,
+			'dong'	=> 4,
 		},
 		'3'	=> {
-			'quack'	=> 1,
-			'quark'	=> 2,
-			'quick'	=> 0,
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -253,7 +255,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 9	check for key only deletion
-$exp = q|18	= bless([{
+$exp = q|19	= bless([{
 		'ding'	=> 1,
 		'dong'	=> 1,
 		'quack'	=> 3,
@@ -266,16 +268,16 @@ $exp = q|18	= bless([{
 	},
 {
 		'1'	=> {
-			'ding'	=> 0,
-			'dong'	=> 2,
+			'ding'	=> 2,
+			'dong'	=> 4,
 		},
 		'3'	=> {
-			'quack'	=> 1,
-			'quark'	=> 2,
-			'quick'	=> 0,
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -294,7 +296,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 11	check for removals
-$exp = q|14	= bless([{
+$exp = q|15	= bless([{
 		'dong'	=> 1,
 		'quark'	=> 3,
 		'quick'	=> 3,
@@ -305,14 +307,14 @@ $exp = q|14	= bless([{
 	},
 {
 		'1'	=> {
-			'dong'	=> 2,
+			'dong'	=> 4,
 		},
 		'3'	=> {
-			'quark'	=> 2,
-			'quick'	=> 0,
+			'quark'	=> 8,
+			'quick'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -331,7 +333,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 13	check for removals
-$exp = q|8	= bless([{
+$exp = q|9	= bless([{
 		'quick'	=> 3,
 	},
 {
@@ -339,10 +341,10 @@ $exp = q|8	= bless([{
 	},
 {
 		'3'	=> {
-			'quick'	=> 0,
+			'quick'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,12,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -354,7 +356,7 @@ print "got: $got\nexp: $exp\nnot "
 # test 14	repopulate the hash
 $h{qw( enee meeny miney mo )} = 'chose';
 $h{qw( once upon a time )} = 'story';
-$exp = q|28	= bless([{
+$exp = q|29	= bless([{
 		'a'	=> 6,
 		'enee'	=> 5,
 		'meeny'	=> 5,
@@ -372,22 +374,22 @@ $exp = q|28	= bless([{
 	},
 {
 		'3'	=> {
-			'quick'	=> 0,
+			'quick'	=> 6,
 		},
 		'5'	=> {
-			'enee'	=> 0,
-			'meeny'	=> 1,
-			'miney'	=> 2,
-			'mo'	=> 3,
+			'enee'	=> 12,
+			'meeny'	=> 13,
+			'miney'	=> 14,
+			'mo'	=> 15,
 		},
 		'6'	=> {
-			'a'	=> 2,
-			'once'	=> 0,
-			'time'	=> 3,
-			'upon'	=> 1,
+			'a'	=> 18,
+			'once'	=> 16,
+			'time'	=> 19,
+			'upon'	=> 17,
 		},
 	},
-7,], 'Tie::Hash::MultiKey');
+7,20,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -417,7 +419,7 @@ print "got: $got\nexp: $exp\nnot "
 
 # test 16	overwrite with a store
 $h{qw( once there were )} = 'bears';
-$exp = q|32	= bless([{
+$exp = q|33	= bless([{
 		'a'	=> 6,
 		'enee'	=> 5,
 		'meeny'	=> 5,
@@ -437,24 +439,24 @@ $exp = q|32	= bless([{
 	},
 {
 		'3'	=> {
-			'quick'	=> 0,
+			'quick'	=> 6,
 		},
 		'5'	=> {
-			'enee'	=> 0,
-			'meeny'	=> 1,
-			'miney'	=> 2,
-			'mo'	=> 3,
+			'enee'	=> 12,
+			'meeny'	=> 13,
+			'miney'	=> 14,
+			'mo'	=> 15,
 		},
 		'6'	=> {
-			'a'	=> 0,
-			'once'	=> 2,
-			'there'	=> 1,
-			'time'	=> 3,
-			'upon'	=> 1,
-			'were'	=> 2,
+			'a'	=> 18,
+			'once'	=> 16,
+			'there'	=> 21,
+			'time'	=> 19,
+			'upon'	=> 17,
+			'were'	=> 22,
 		},
 	},
-7,], 'Tie::Hash::MultiKey');
+7,23,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -485,8 +487,8 @@ print "got: $got\nexp: $exp\nnot "
 &ok;
 
 # test 18	check keylist
-@got = sort tied(%h)->keylist('there');
-$exp = q|6	= ['a','once','there','time','upon','were',];
+@got = tied(%h)->keylist('there');
+$exp = q|6	= ['once','upon','a','time','there','were',];
 |;
 $got = $dd->DumperA(\@got);
 print "got: $got\nexp: $exp\nnot "
@@ -563,13 +565,13 @@ print "got: $got\nexp: $exp\nnot "
 
 # test 24	clear tied hash
 %h = ();
-$exp = q|4	= bless([{
+$exp = q|5	= bless([{
 	},
 {
 	},
 {
 	},
-0,], 'Tie::Hash::MultiKey');
+0,0,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);
 print "got: $got\nexp: $exp\nnot "
@@ -583,7 +585,7 @@ print "got: $got\nexp: $exp\nnot "
 	('x','y','z')	=> 'not sliced', # goes in as (x => y, z => 'not sliced')
 	['d','e','f']	=> 'hex',
 );
-$exp = q|28	= bless([{
+$exp = q|29	= bless([{
 		'd'	=> 4,
 		'e'	=> 4,
 		'f'	=> 4,
@@ -604,21 +606,21 @@ $exp = q|28	= bless([{
 			'hello'	=> 0,
 		},
 		'1'	=> {
-			'hola'	=> 0,
+			'hola'	=> 1,
 		},
 		'2'	=> {
-			'x'	=> 0,
+			'x'	=> 2,
 		},
 		'3'	=> {
-			'z'	=> 0,
+			'z'	=> 3,
 		},
 		'4'	=> {
-			'd'	=> 0,
-			'e'	=> 1,
-			'f'	=> 2,
+			'd'	=> 4,
+			'e'	=> 5,
+			'f'	=> 6,
 		},
 	},
-5,], 'Tie::Hash::MultiKey');
+5,7,], 'Tie::Hash::MultiKey');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -629,7 +631,7 @@ print "got: $got\nexp: $exp\nnot "
 
 # test 26	slice assignment
 @{$hp}{[qw(x group)],'new'} = qw( consolidate NEW );
-$exp = q|34	= bless([{
+$exp = q|35	= bless([{
 		'd'	=> 4,
 		'e'	=> 4,
 		'f'	=> 4,
@@ -653,25 +655,25 @@ $exp = q|34	= bless([{
 			'hello'	=> 0,
 		},
 		'1'	=> {
-			'hola'	=> 0,
+			'hola'	=> 1,
 		},
 		'2'	=> {
-			'group'	=> 1,
-			'x'	=> 0,
+			'group'	=> 8,
+			'x'	=> 2,
 		},
 		'3'	=> {
-			'z'	=> 0,
+			'z'	=> 3,
 		},
 		'4'	=> {
-			'd'	=> 0,
-			'e'	=> 1,
-			'f'	=> 2,
+			'd'	=> 4,
+			'e'	=> 5,
+			'f'	=> 6,
 		},
 		'5'	=> {
-			'new'	=> 0,
+			'new'	=> 9,
 		},
 	},
-6,], 'Tie::Hash::MultiKey');
+6,10,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);
 $exp = normalize($exp);
@@ -695,7 +697,7 @@ my %slice = (qw(
 
 @keys = sort keys %slice;
 @h{@keys} = @slice{@keys};
-$exp = q|70	= bless([{
+$exp = q|71	= bless([{
 		'a1'	=> 6,
 		'a2'	=> 7,
 		'a3'	=> 8,
@@ -737,52 +739,52 @@ $exp = q|70	= bless([{
 			'hello'	=> 0,
 		},
 		'1'	=> {
-			'hola'	=> 0,
+			'hola'	=> 1,
 		},
 		'10'	=> {
-			'b2'	=> 0,
+			'b2'	=> 14,
 		},
 		'11'	=> {
-			'b3'	=> 0,
+			'b3'	=> 15,
 		},
 		'12'	=> {
-			'b4'	=> 0,
+			'b4'	=> 16,
 		},
 		'13'	=> {
-			'c1'	=> 0,
+			'c1'	=> 17,
 		},
 		'14'	=> {
-			'c2'	=> 0,
+			'c2'	=> 18,
 		},
 		'2'	=> {
-			'group'	=> 1,
-			'x'	=> 0,
+			'group'	=> 8,
+			'x'	=> 2,
 		},
 		'3'	=> {
-			'z'	=> 0,
+			'z'	=> 3,
 		},
 		'4'	=> {
-			'd'	=> 0,
-			'e'	=> 1,
-			'f'	=> 2,
+			'd'	=> 4,
+			'e'	=> 5,
+			'f'	=> 6,
 		},
 		'5'	=> {
-			'new'	=> 0,
+			'new'	=> 9,
 		},
 		'6'	=> {
-			'a1'	=> 0,
+			'a1'	=> 10,
 		},
 		'7'	=> {
-			'a2'	=> 0,
+			'a2'	=> 11,
 		},
 		'8'	=> {
-			'a3'	=> 0,
+			'a3'	=> 12,
 		},
 		'9'	=> {
-			'b1'	=> 0,
+			'b1'	=> 13,
 		},
 	},
-15,], 'Tie::Hash::MultiKey');
+15,19,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);
 $exp = normalize($exp);
@@ -798,8 +800,10 @@ print "got: $got, exp: $exp\nnot "
         unless $got == $exp;
 &ok;
 
+$debug = 0;	# kill debugging because 'vi' is not preserved and varies by platform
+
 # test 29	check consolidated data
-$exp = q|56	= bless([{
+$exp = q|57	= bless([{
 		'a1'	=> 6,
 		'a2'	=> 6,
 		'a3'	=> 6,
@@ -831,45 +835,99 @@ $exp = q|56	= bless([{
 	},
 {
 		'0'	=> {
-			'b1'	=> 3,
-			'b2'	=> 0,
-			'b3'	=> 1,
-			'b4'	=> 2,
+			'b1'	=> 13,
+			'b2'	=> 14,
+			'b3'	=> 15,
+			'b4'	=> 16,
 		},
 		'1'	=> {
-			'c1'	=> 0,
-			'c2'	=> 1,
+			'c1'	=> 17,
+			'c2'	=> 18,
 		},
 		'2'	=> {
-			'new'	=> 0,
+			'new'	=> 9,
 		},
 		'3'	=> {
 			'hello'	=> 0,
 			'hola'	=> 1,
 		},
 		'4'	=> {
-			'z'	=> 0,
+			'z'	=> 3,
 		},
 		'5'	=> {
-			'd'	=> 2,
-			'e'	=> 0,
-			'f'	=> 1,
+			'd'	=> 4,
+			'e'	=> 5,
+			'f'	=> 6,
 		},
 		'6'	=> {
-			'a1'	=> 0,
-			'a2'	=> 1,
-			'a3'	=> 2,
+			'a1'	=> 10,
+			'a2'	=> 11,
+			'a3'	=> 12,
 		},
 		'7'	=> {
-			'group'	=> 0,
-			'x'	=> 1,
+			'group'	=> 8,
+			'x'	=> 2,
 		},
 	},
-8,], 'Tie::Hash::MultiKey');
+8,19,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);
 $exp = normalize($exp);
 $got = normalize($got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 30	check ordered list for ALL
+@got = tied(%h)->keylist();
+$exp = q|18	= ['hello','hola','x','z','d','e','f','group','new','a1','a2','a3','b1','b2','b3','b4','c1','c2',];
+|;
+$got = $dd->DumperA(\@got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 31	get slot '0';
+@got = tied(%h)->slotlist(0);
+$exp = q|8	= ['hello','z','d','x','new','a1','b1','c1',];
+|;
+$got = $dd->DumperA(\@got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 32	get slot '1'
+@got = tied(%h)->slotlist(1);
+$exp = q|8	= ['hola',undef,'e','group',undef,'a2','b2','c2',];
+|;
+$got = $dd->DumperA(\@got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 33	get slot '2'
+@got = tied(%h)->slotlist(2);
+$exp = q|8	= [undef,undef,'f',undef,undef,'a3','b3',undef,];
+|;
+$got = $dd->DumperA(\@got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 34	get slot '3'
+@got = tied(%h)->slotlist(3);
+$exp = q|8	= [undef,undef,undef,undef,undef,undef,'b4',undef,];
+|;
+$got = $dd->DumperA(\@got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 35	get slot '4'
+@got = tied(%h)->slotlist(4);
+$exp = q|8	= [undef,undef,undef,undef,undef,undef,undef,undef,];
+|;
+$got = $dd->DumperA(\@got);
 print "got: $got\nexp: $exp\nnot "
         unless $got eq $exp;
 &ok;

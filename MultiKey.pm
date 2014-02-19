@@ -5,7 +5,7 @@ use Carp;
 use Tie::Hash;
 use vars qw($VERSION);
 
-$VERSION = do { my @r = (q$Revision: 0.03 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.04 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 =head1 NAME
 
@@ -42,7 +42,9 @@ Tie::Hash::MultiKey - multiple keys per value
   $val = tied(%hash)->remove('foo', 'bar');
   $val = tied(%hash)->remove( $array_ref );
 
-  @list = tied(%hash)->keylist('foo')
+  @ordered_keys = tied(%hash)->keylist('foo')
+  @allkeys_by_order = tied(%hash)->keylist();
+  @slotlist = tied(%hash)->slotlist($i);
 
   $num_vals = tied(%hash)->consolidate;
 
@@ -52,7 +54,7 @@ Tie::Hash::MultiKey - multiple keys per value
 
 =head1 DESCRIPTION
 
-Tie::Hash::MultiKey creates hashes that can have multiple keys for a single value. 
+Tie::Hash::MultiKey creates hashes that can have multiple ordered keys for a single value. 
 As shown in the SYNOPSIS, multiple keys share a common value.
 
 Additional keys can be added that share the same value and keys can be removed without deleting other 
@@ -84,7 +86,7 @@ keys for binary data. i.e.
 	$keys = ['a','b','c'];
 	$hash{$keys} = $something;
 
-This construct is ALWAYS safe.
+The ARRAY_REF construct is ALWAYS safe.
 
 =cut
 
@@ -101,11 +103,12 @@ This construct is ALWAYS safe.
 #	vi	= {key => dummy, key => dummy, ...}, values unused
 #	},
 # 3 =>	vi	# numeric value of value index
+# 4 =>	or	# numeric value of key order
 # ]
 
 sub TIEHASH {
   my $class = shift;
-  bless [{},{},{},0], $class;
+  bless [{},{},{},0,0], $class;
 }
 
 sub FETCH {
@@ -150,15 +153,18 @@ sub STORE {
     my $vi;
     next unless exists $kh->{$key};
     $vi = $kh->{$key};	# get key index
-    $found{$vi} = 1;
+    $found{$vi} = $sh->{$vi}->{$key};	# capture shared key value
   }
-  my @vi = sort keys %found;
+  my @vi = keys %found;
   $keys = {};
-  @{$keys}{@keys} = (0..$#keys);	# create key list
+  my $ostart = $self->[4];
+  my $oend = $ostart + $#keys;		# first key order entry
+  $self->[4] = $oend + 1;		# last key order entry
+  @{$keys}{@keys} = ($ostart..$oend);	# create key list
   if (@vi) {				# if there are existing keys
     foreach (@vi) {			# consolidate keys
       my @sk = keys %{$sh->{$_}};	# shared keys
-      @{$keys}{@sk} = (0..$#sk);
+      @{$keys}{@sk} = @{$sh->{$_}}{@sk};
       delete $vh->{$_};		# delete existing value
       delete $sh->{$_};		# delete existing key list
     }
@@ -212,6 +218,7 @@ sub NEXTKEY {
 sub CLEAR {
   my $self = shift;
   $self->[3] = 0;
+  $self->[4] = 0;
   %{$self->[0]} = ();		# empty existing hashes
   %{$self->[1]} = ();
   %{$self->[2]} = ();
@@ -240,7 +247,7 @@ Returns a method pointer for this package.
 Breaks the binding between a variable and this package. There is no affect
 if the variable is not tied.
 
-=item * $val = ->addkey('new_key' => 'existing_key');
+=item * $val = $thm->addkey('new_key' => 'existing_key');
 
 Add one or more keys to the shared key group for a particular value.
 
@@ -257,16 +264,17 @@ Arguments may be a single SCALAR, ARRAY, or ARRAY_REF
 =cut
 
 sub addkey {
-  my($kh,$vh,$sh) = @{shift @_};
+  my $self = shift;
+  my($kh,$vh,$sh) = @{$self};
   my($key,@new) = &_flip;
   croak "key '$key' does not exist" unless exists $kh->{$key};
   my $vi = $kh->{$key};
   foreach(@new) {
     if (exists $kh->{$_} && $kh->{$key} != $vi) {
-      my @kset = sort keys %{$sh->{$vi}};
+      my @kset = sort { $sh->{$vi}->{$a} <=> $sh->{$vi}->{$b} } keys %{$sh->{$vi}};
       croak "key belongs to key set @kset";
     }
-    $sh->{$vi}->{$_} = 1;
+    $sh->{$vi}->{$_} = $self->[4]++;
     $kh->{$_} = $vi;
   }
   return $vh->{$vi};
@@ -310,27 +318,80 @@ sub remove {
   return wantarray ? @vals : $vals[0];
 }
 
-=item * @list = ->keylist('foo');
+=item * @ordered_keys = $thm->keylist('foo');
 
-Returns all the shared keys for KEY 'foo', including 'foo'
+=item * @allkeys_by_order = $thm->keylist();
 
-  input:	key
-  returns:	@shared_keys
+Returns all the keys in the group that includes the KEY 'foo' in the order
+that they were added to the %hash;
+
+If no argument is specified, returns all the keys in the %hash in the order
+that they were added to the %hash
+
+  input:	key or EMPTY
+  returns:	@ordered_keys
+
+  returns:	() if $key is not in the %hash
 
 =cut
 
 sub keylist {
   my($self,$key) = @_;
-  return () unless exists $self->[0]->{$key};
-  my $vi = $self->[0]->{$key};
-  return keys %{$self->[2]->{$vi}};
+  my($kh,$vh,$sh) = @{$self};
+  if (defined $key) {
+    return () unless exists $kh->{$key};
+    my $vi = $kh->{$key};
+    return sort { $sh->{$vi}->{$a} <=> $sh->{$vi}->{$b} } keys %{$sh->{$vi}};
+  }
+  my %ak;			# key => order
+  foreach(keys %{$sh}) {
+    my @keys = keys %{$sh->{$_}};
+    @ak{@keys} = @{$sh->{$_}}{@keys};
+  }
+  return sort { $ak{$a} <=> $ak{$b} } keys %ak;
 }
 
-=item * ->consolidate;
+=item * @keys = $thm->slotlist($i);
+
+Returns one key from each key group in position B<$i>.
+
+  i.e.
+	$thm = tie %hash, 'Tie::Hash::MultiKey';
+
+	$hash{['a','b','c']} = 'one';
+	$hash{['d','e','f']} = 'two';
+	$hash{'g'}           = 'three';
+	$hash{['h','i','j']} = 'four';
+
+	@slotkeys = $thm->slotlist(1);
+
+  will produce ('b','e', undef, 'i')
+
+All the keys at index '1' for the groups to which they were added, in the
+order which the FIRST KEY in the group was added to the %hash. If there is no key in the
+specified slot, an undef is returned for that position.
+
+=cut
+
+sub slotlist($$) {
+  my($self,$i) = @_;
+  my($kh,$vh,$sh) = @{$self};
+  my %kbs;			# order => key
+  foreach(keys %{$sh}) {
+    my $slot = $sh->{$_};
+    my @keys = sort { $slot->{$a} <=> $slot->{$b} } keys %{$slot};
+    my $key = $keys[$i];
+    $kbs{$slot->{pop @keys}} = $key; # undef is there is no key
+  }
+  my @order = sort { $a <=> $b } keys %kbs;
+  return @kbs{@order};
+}
+
+=item * $thm->consolidate;
 
 USE WITH CAUTION
 
-This method consolidates all keys with a common values.
+Consolidate all keys with the same values into common groups.
 
   returns: number of consolidated key groups
 
@@ -339,24 +400,28 @@ This method consolidates all keys with a common values.
 
 =cut
 
-sub consolidate {
+sub consolidate {	# NOTE, vi is not preserved. Since it's not used outside, this is not a big deal except for testing
   my $self = shift;
   my($kh,$vh,$sh) = @{$self};
-  my %kbv;				# keys by value
+  my (%kbv,%ko);		# keys by value, key order
   while (my($k,$v) = each %$vh) {
+    my @keys = keys %{$sh->{$k}};
+    @ko{@keys} = @{$sh->{$k}}{@keys};	# preserve key order
     if (exists $kbv{$v}) {		# have key group?
-      push @{$kbv{$v}}, keys %{$sh->{$k}};	# add keys
+      push @{$kbv{$v}}, @keys;		# add keys
     } else {
-      $kbv{$v} = [keys %{$sh->{$k}}]; 	# start new key group
+      $kbv{$v} = [@keys]; 	# start new key group
     }
   }
+  my $ko = $self->[4];		# save next key order number
   CLEAR($self);
   while (my($v,$k) = each %kbv) {	# values by key
     my $indx = $self->[3]++;
     $vh->{$indx} = $v;			# value
-    @{$sh->{$indx}}{@$k} = (0..$#{$k});	# shared keys
+    @{$sh->{$indx}}{@$k} = @ko{@$k};	# restore shared keys and order
     map{$kh->{$_} = $indx} @$k;
   }
+  $self->[4] = $ko;
   $self->[3];
 }
 
@@ -368,42 +433,45 @@ __END__
 
 A tied multikey %hash behave like a regular %hash for most operations;
 
-  B<$value = $hash{$key}> returns the key group value
+B<$value = $hash{$key}> returns the key group value
 
-  B<$hash{$key} = $value> sets the value for the key group
+B<$hash{$key} = $value> sets the value for the key group
+
   i.e. all keys in the group will return that value
 
-  B<$hash{$key1,$key2} = $value assigns $value to the key
-  key group consisting of $key1, $key2 if they do not.
-  If at least one of the keys already exists, the remaining
-  keys are assigned to the key group and the value is set
-  for the entire group.
+B<$hash{$key1,$key2} = $value> assigns $value to the key
+key group consisting of $key1, $key2 if they do not.
+If at least one of the keys already exists, the remaining
+keys are assigned to the key group and the value is set
+for the entire group.
 
-  B<Better> syntax $hash{[$key,$key]} = $value;
+B<Better> syntax $hash{[$key,$key]} = $value;
 
-  B<delete $hash{$key}> deletes the ENTIRE key group
-  to which B<$key> belongs.
+B<delete $hash{$key}> deletes the ENTIRE key group
+to which B<$key> belongs.
 
-  B<delete $hash($key1,$key2> deletes ALL groups
-  to which $key1 and $key2 belong.
+B<delete $hash($key1,$key2)> deletes ALL groups
+to which $key1 and $key2 belong.
 
-  B<Better> syntax delete $hash{[$key1,$key2]};
+B<Better> syntax delete $hash{[$key1,$key2]};
 
-  B<keys %hash> returns all keys.
+B<keys %hash> returns all keys.
 
-  B<values %hash> returns all values
-  NOTE: that this will not be the same number of
-  items as returned by B<keys> unless there are no
-  key groups containing more than one key.
+B<values %hash> returns all values
 
-  B<($k,$v) = each %hash> behaves as expected.
+NOTE: that this will not be the same number of
+items as returned by B<keys> unless there are no
+key groups containing more than one key.
+
+B<($k,$v) = each %hash> behaves as expected.
 
 References to tied %hash behave in the same manner as regular %hash's except
 as noted for multiple key values above.
 
 =head1 LIMITATIONS
 
-SLICE operations may produce unusual results. Tie::Hash::MultiKey hashs only
+SLICE operations will produce unusual results if you try to use regular
+ARRAYS to specify key groups in the slice. Tie::Hash::MultiKey %hash's only
 accept SCALAR or ARRAY_REF arguments for SLICE and direct assigment.
 
   i.e.

@@ -1,4 +1,6 @@
 
+# multi_as_aref.t
+
 BEGIN { $| = 1; print "1..5\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
@@ -29,7 +31,7 @@ sub ok {
 # rebuild($var);	# converts all the references
 #
 
-my $debug = 0;
+my $debug = 1;
 
 sub live {
   (my $var = shift) =~ s/^\d+\s+=//;
@@ -75,13 +77,13 @@ my %h;
 tie %h, 'Tie::Hash::MultiKey';
 
 # test 2	check data structure
-my $exp = q|4	= bless([{
+my $exp = q|5	= bless([{
 	},
 {
 	},
 {
 	},
-0,], 'Tie::Hash::MultiKey');
+0,0,], 'Tie::Hash::MultiKey');
 |;
 
 my $got = $dd->DumperA(tied %h);
@@ -91,7 +93,7 @@ print "got: $got\nexp: $exp\nnot "
 
 # test 3	add elements		"STORE"
 $h{['foo','bar']} = 'baz';
-$exp = q|10	= bless([{
+$exp = q|11	= bless([{
 		'bar'	=> 0,
 		'foo'	=> 0,
 	},
@@ -104,7 +106,7 @@ $exp = q|10	= bless([{
 			'foo'	=> 0,
 		},
 	},
-1,], 'Tie::Hash::MultiKey');
+1,2,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);  
 $exp = normalize($exp);
@@ -121,7 +123,7 @@ print "got: $got, exp: $exp\nnot "
 &ok;
 
 # test 5	check that values are actually their
-$exp = q|12	= bless([{
+$exp = q|13	= bless([{
 		'bar'	=> 0,
 		'buz'	=> 0,
 		'foo'	=> 0,
@@ -132,11 +134,11 @@ $exp = q|12	= bless([{
 {
 		'0'	=> {
 			'bar'	=> 1,
-			'buz'	=> 1,
+			'buz'	=> 2,
 			'foo'	=> 0,
 		},
 	},
-1,], 'Tie::Hash::MultiKey');
+1,3,], 'Tie::Hash::MultiKey');
 |;
 $got = $dd->DumperA(tied %h);
 $exp = normalize($exp);
