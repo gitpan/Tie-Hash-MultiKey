@@ -5,7 +5,7 @@ use Carp;
 use Tie::Hash;
 use vars qw($VERSION);
 
-$VERSION = do { my @r = (q$Revision: 0.04 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.05 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 =head1 NAME
 
@@ -19,6 +19,8 @@ Tie::Hash::MultiKey - multiple keys per value
   $thm = tied %hash;
 
   untie %hash;
+
+  ($href,$thm) = new Tie::Hash::MultiValue;
 
   $hash{'foo'}        = 'baz';
 	or
@@ -47,6 +49,9 @@ Tie::Hash::MultiKey - multiple keys per value
   @slotlist = tied(%hash)->slotlist($i);
 
   $num_vals = tied(%hash)->consolidate;
+
+  ($newRef,$newThm) = tied(%hash)->clone();
+  $newThm = tied(%hash)->copy(tied(%new));
 
   All of the above methods can be accessed as:
 
@@ -140,7 +145,7 @@ sub _wash {
 	? ('')
 	: split /$;/, $keys, -1] 
   		unless ref $keys eq 'ARRAY';
-  croak "empty key" unless @$keys;
+  croak "empty key\n" unless @$keys;
   return $keys;
 }
 
@@ -222,6 +227,7 @@ sub CLEAR {
   %{$self->[0]} = ();		# empty existing hashes
   %{$self->[1]} = ();
   %{$self->[2]} = ();
+  return $self;
 }
 
 sub SCALAR {
@@ -247,6 +253,29 @@ Returns a method pointer for this package.
 Breaks the binding between a variable and this package. There is no affect
 if the variable is not tied.
 
+=item * ($href,$thm) = new Tie::Hash::MultiKey;
+
+This method returns an UNBLESSED reference to an anonymous tied %hash.
+
+  input:	none
+  returns:	unblessed tied %hash reference,
+		object handle
+
+To get the object handle from \%hash use this.
+
+	$thm = tied %{$href};
+
+In SCALAR context it returns the unblessed %hash pointer. In ARRAY context it returns
+the unblessed %hash pointer and the package object/method  pointer.
+
+=cut
+
+sub new {
+  my %x;
+  my $thm = tie %x, __PACKAGE__;
+  return wantarray ? (\%x,$thm) : \%x;
+}
+
 =item * $val = $thm->addkey('new_key' => 'existing_key');
 
 Add one or more keys to the shared key group for a particular value.
@@ -267,12 +296,12 @@ sub addkey {
   my $self = shift;
   my($kh,$vh,$sh) = @{$self};
   my($key,@new) = &_flip;
-  croak "key '$key' does not exist" unless exists $kh->{$key};
+  croak "key '$key' does not exist\n" unless exists $kh->{$key};
   my $vi = $kh->{$key};
   foreach(@new) {
     if (exists $kh->{$_} && $kh->{$key} != $vi) {
       my @kset = sort { $sh->{$vi}->{$a} <=> $sh->{$vi}->{$b} } keys %{$sh->{$vi}};
-      croak "key belongs to key set @kset";
+      croak "key belongs to key set @kset\n";
     }
     $sh->{$vi}->{$_} = $self->[4]++;
     $kh->{$_} = $vi;
@@ -395,9 +424,6 @@ Consolidate all keys with the same values into common groups.
 
   returns: number of consolidated key groups
 
-
-=back
-
 =cut
 
 sub consolidate {	# NOTE, vi is not preserved. Since it's not used outside, this is not a big deal except for testing
@@ -424,6 +450,86 @@ sub consolidate {	# NOTE, vi is not preserved. Since it's not used outside, this
   $self->[4] = $ko;
   $self->[3];
 }
+
+=item * ($href,$thm) = $thm->clone();
+
+This method returns an UNBLESSED reference to an anonymous tied %hash that
+is a deep copy of the parent object.
+
+  input:	none
+  returns:	unblessed tied %hash reference,
+		object handle
+
+To get the object handle from \%hash use this.
+
+	$thm = tied %{$href};
+
+In SCALAR context it returns the unblessed %hash pointer. In ARRAY context it returns
+the unblessed %hash pointer and the package object/method  pointer.
+
+  i.e.
+	$newRef = $thm->clone();
+
+	$newRref->{'a','b'} = 'content'
+
+	$newThm = tied %{$newRef};
+
+=item * $new_thm = $thm->copy(tie %new,'Tie::Hash::MultiKey');
+
+This method deep copies a MultiKey %hash to another B<new> %hash. It may
+be invoked on an existing tied object handle or a reference to a tied %hash.
+
+  input:	object handle OR reference to tied %hash
+  returns:	object handle / method pointer
+
+  i.e
+	$thm = tie %hash,'Tie::Hash::MultiKey';
+	$newThm = $thm->copy(tie %new,'Tie::Hash::MultiKey');
+  or
+	tie %new,'Tie::Hash::MultiKey');
+	$newThm = $thm->copy(\%new);
+
+NOTE: this method duplicates the data stored in the parent %hash,
+overwriting and destroying anything that may have been stored in the copy
+target.
+
+=back
+
+=cut
+
+sub copy {
+  my($self,$copy) = @_;
+  croak "no target specified\n"
+	unless defined $copy;
+  croak "argument is not a ",__PACKAGE__," object\n"
+	unless ref $copy eq __PACKAGE__ || (ref $copy eq 'HASH' && ref ($copy = tied %$copy) eq __PACKAGE__);
+  CLEAR($copy) unless $copy->[3] == 0;	# skip if empty hash
+  _copy($self,$copy);
+}
+
+sub clone {
+  my($href,$copy) = &new;
+  _copy(shift,$copy);
+  return wantarray ? ($href,$copy) : $href;
+}
+
+sub _copy {
+  my($self,$copy) = @_;
+  my($kh,$vh,$sh) = @{$self};
+  my @keys = keys %$kh;
+  my @vals = @{$kh}{@keys};
+  my($ckh,$cvh,$csh) = @{$copy};
+  @{$ckh}{@keys} = @vals;		# clone keys
+  @{$cvh}{@vals} = @{$vh}{@vals};	# clone value index
+  foreach (@vals) {
+    @keys = keys %{$sh->{$_}};
+    @{$csh->{$_}}{@keys} = @{$sh->{$_}}{@keys};
+  }
+  @{$copy}[3,4] = @{$self}[3,4];
+  return $copy;
+}
+
+sub DESTROY {}
 
 1;
 

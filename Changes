@@ -1,5 +1,8 @@
 Revision history for Perl extension Tie::Hash::MultiKey
 
+0.05  Wed Feb 19 20:10:52 PST 2014
+	add methods 'new', 'copy', 'clone'
+
 0.04  Wed Feb 19 01:47:49 PST 2014
 	add ordered key capability
 

@@ -9,6 +9,8 @@ SYNOPSIS
 
       untie %hash;
 
+      ($href,$thm) = new Tie::Hash::MultiValue;
+
       $hash{'foo'}        = 'baz';
             or
       $hash{'foo', 'bar'} = 'baz';
@@ -33,17 +35,21 @@ SYNOPSIS
 
       @ordered_keys = tied(%hash)->keylist('foo')
       @allkeys_by_order = tied(%hash)->keylist();
+      @slotlist = tied(%hash)->slotlist($i);
 
       $num_vals = tied(%hash)->consolidate;
+
+      ($newRef,$newThm) = tied(%hash)->clone();
+      $newThm = tied(%hash)->copy(tied(%new));
 
       All of the above methods can be accessed as:
 
       i.e.  $thm->consolidate;
 
 DESCRIPTION
-    Tie::Hash::MultiKey creates hashes that can have multiple keys for a
-    single value. As shown in the SYNOPSIS, multiple keys share a common
-    value.
+    Tie::Hash::MultiKey creates hashes that can have multiple ordered keys
+    for a single value. As shown in the SYNOPSIS, multiple keys share a
+    common value.
 
     Additional keys can be added that share the same value and keys can be
     removed without deleting other keys that share that value.
@@ -74,7 +80,7 @@ DESCRIPTION
             $keys = ['a','b','c'];
             $hash{$keys} = $something;
 
-    This construct is ALWAYS safe.
+    The ARRAY_REF construct is ALWAYS safe.
 
     * $thm = tie %hash,'Tie::Hash::MultiValue';
         Ties a %hash to this package for enhanced capability and returns a
@@ -89,6 +95,22 @@ DESCRIPTION
     * untie %hash;
         Breaks the binding between a variable and this package. There is no
         affect if the variable is not tied.
+
+    * ($href,$thm) = new Tie::Hash::MultiKey;
+        This method returns an UNBLESSED reference to an anonymous tied
+        %hash.
+
+          input:        none
+          returns:      unblessed tied %hash reference,
+                        object handle
+
+        To get the object handle from \%hash use this.
+
+                $thm = tied %{$href};
+
+        In SCALAR context it returns the unblessed %hash pointer. In ARRAY
+        context it returns the unblessed %hash pointer and the package
+        object/method pointer.
 
     * $val = $thm->addkey('new_key' => 'existing_key');
         Add one or more keys to the shared key group for a particular value.
@@ -131,7 +153,7 @@ DESCRIPTION
           returns:      () if $key is not in the %hash
 
     * @keys = $thm->slotlist($i);
-        Returns one key from each key group in index position $i.
+        Returns one key from each key group in position $i.
 
           i.e.
                 $thm = tie %hash, 'Tie::Hash::MultiKey';
@@ -153,48 +175,90 @@ DESCRIPTION
     * $thm->consolidate;
         USE WITH CAUTION
 
-        This method consolidates all keys with a common values.
+        Consolidate all keys with the same values into common groups.
 
           returns: number of consolidated key groups
+
+    * ($href,$thm) = $thm->clone();
+        This method returns an UNBLESSED reference to an anonymous tied
+        %hash that is a deep copy of the parent object.
+
+          input:        none
+          returns:      unblessed tied %hash reference,
+                        object handle
+
+        To get the object handle from \%hash use this.
+
+                $thm = tied %{$href};
+
+        In SCALAR context it returns the unblessed %hash pointer. In ARRAY
+        context it returns the unblessed %hash pointer and the package
+        object/method pointer.
+
+          i.e.
+                $newRef = $thm->clone();
+
+                $newRref->{'a','b'} = 'content'
+
+                $newThm = tied %{$newRef};
+
+    * $new_thm = $thm->copy(tie %new,'Tie::Hash::MultiKey');
+        This method deep copies a MultiKey %hash to another new %hash. It
+        may be invoked on an existing tied object handle or a reference to a
+        tied %hash.
+
+          input:        object handle OR reference to tied %hash
+          returns:      object handle / method pointer
+
+          i.e
+                $thm = tie %hash,'Tie::Hash::MultiKey';
+                $newThm = $thm->copy(tie %new,'Tie::Hash::MultiKey');
+          or
+                tie %new,'Tie::Hash::MultiKey');
+                $newThm = $thm->copy(\%new);
+
+        NOTE: this method duplicates the data stored in the parent %hash,
+        overwriting and destroying anything that may have been stored in the
+        copy target.
 
 COMMON OPERATIONS
     A tied multikey %hash behave like a regular %hash for most operations;
 
-      B<$value = $hash{$key}> returns the key group value
+    $value = $hash{$key} returns the key group value
 
-      B<$hash{$key} = $value> sets the value for the key group
+    $hash{$key} = $value sets the value for the key group
+
       i.e. all keys in the group will return that value
 
-      B<$hash{$key1,$key2} = $value assigns $value to the key
-      key group consisting of $key1, $key2 if they do not.
-      If at least one of the keys already exists, the remaining
-      keys are assigned to the key group and the value is set
-      for the entire group.
+    $hash{$key1,$key2} = $value assigns $value to the key key group
+    consisting of $key1, $key2 if they do not. If at least one of the keys
+    already exists, the remaining keys are assigned to the key group and the
+    value is set for the entire group.
 
-      B<Better> syntax $hash{[$key,$key]} = $value;
+    Better syntax $hash{[$key,$key]} = $value;
 
-      B<delete $hash{$key}> deletes the ENTIRE key group
-      to which B<$key> belongs.
+    delete $hash{$key} deletes the ENTIRE key group to which $key belongs.
 
-      B<delete $hash($key1,$key2> deletes ALL groups
-      to which $key1 and $key2 belong.
+    delete $hash($key1,$key2) deletes ALL groups to which $key1 and $key2
+    belong.
 
-      B<Better> syntax delete $hash{[$key1,$key2]};
+    Better syntax delete $hash{[$key1,$key2]};
 
-      B<keys %hash> returns all keys.
+    keys %hash returns all keys.
 
-      B<values %hash> returns all values
-      NOTE: that this will not be the same number of
-      items as returned by B<keys> unless there are no
-      key groups containing more than one key.
+    values %hash returns all values
 
-      B<($k,$v) = each %hash> behaves as expected.
+    NOTE: that this will not be the same number of items as returned by keys
+    unless there are no key groups containing more than one key.
+
+    ($k,$v) = each %hash behaves as expected.
 
     References to tied %hash behave in the same manner as regular %hash's
     except as noted for multiple key values above.
 
 LIMITATIONS
-    SLICE operations may produce unusual results. Tie::Hash::MultiKey hashs
+    SLICE operations will produce unusual results if you try to use regular
+    ARRAYS to specify key groups in the slice. Tie::Hash::MultiKey %hash's
     only accept SCALAR or ARRAY_REF arguments for SLICE and direct
     assigment.
 
