@@ -4,12 +4,12 @@ NAME
 SYNOPSIS
       use Tie::Hash::MultiKey;
 
-      $thm = tie %hash, qw(Tie::Hash::MultiValue);
+      $thm = tie %hash, qw(Tie::Hash::MultiKey);
       $thm = tied %hash;
 
       untie %hash;
 
-      ($href,$thm) = new Tie::Hash::MultiValue;
+      ($href,$thm) = new Tie::Hash::MultiKey;
 
       $hash{'foo'}        = 'baz';
             or
@@ -82,12 +82,12 @@ DESCRIPTION
 
     The ARRAY_REF construct is ALWAYS safe.
 
-    * $thm = tie %hash,'Tie::Hash::MultiValue';
+    * $thm = tie %hash,'Tie::Hash::MultiKey';
         Ties a %hash to this package for enhanced capability and returns a
         method pointer.
 
           my %hash;
-          my $thm = tie %hash,'Tie::Hash::MultiValue';
+          my $thm = tie %hash,'Tie::Hash::MultiKey';
 
     * $thm = tied %hash;
         Returns a method pointer for this package.

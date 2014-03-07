@@ -1,5 +1,8 @@
 Revision history for Perl extension Tie::Hash::MultiKey
 
+0.06  Fri Mar  7 11:42:45 PST 2014
+	correct documentation errors
+
 0.05  Wed Feb 19 20:10:52 PST 2014
 	add methods 'new', 'copy', 'clone'
 

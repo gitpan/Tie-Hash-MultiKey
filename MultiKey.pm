@@ -5,7 +5,7 @@ use Carp;
 use Tie::Hash;
 use vars qw($VERSION);
 
-$VERSION = do { my @r = (q$Revision: 0.05 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
+$VERSION = do { my @r = (q$Revision: 0.06 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r };
 
 =head1 NAME
 
@@ -15,12 +15,12 @@ Tie::Hash::MultiKey - multiple keys per value
 
   use Tie::Hash::MultiKey;
 
-  $thm = tie %hash, qw(Tie::Hash::MultiValue);
+  $thm = tie %hash, qw(Tie::Hash::MultiKey);
   $thm = tied %hash;
 
   untie %hash;
 
-  ($href,$thm) = new Tie::Hash::MultiValue;
+  ($href,$thm) = new Tie::Hash::MultiKey;
 
   $hash{'foo'}        = 'baz';
 	or
@@ -236,13 +236,13 @@ sub SCALAR {
 
 =over 4
 
-=item * $thm = tie %hash,'Tie::Hash::MultiValue';
+=item * $thm = tie %hash,'Tie::Hash::MultiKey';
 
 Ties a %hash to this package for enhanced capability and returns a method
 pointer.
 
   my %hash;
-  my $thm = tie %hash,'Tie::Hash::MultiValue';
+  my $thm = tie %hash,'Tie::Hash::MultiKey';
 
 =item * $thm = tied %hash;
 
