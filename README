@@ -4,7 +4,7 @@ NAME
 SYNOPSIS
       use Tie::Hash::MultiKey;
 
-      $thm = tie %hash, qw(Tie::Hash::MultiKey);
+      $thm = tie %hash, qw(Tie::Hash::MultiKey) ,@optionalext;
       $thm = tied %hash;
 
       untie %hash;
@@ -33,14 +33,18 @@ SYNOPSIS
       $val = tied(%hash)->remove('foo', 'bar');
       $val = tied(%hash)->remove( $array_ref );
 
+      $val = tied(%hash)->delkey(); alias for above
+
       @ordered_keys = tied(%hash)->keylist('foo')
       @allkeys_by_order = tied(%hash)->keylist();
       @slotlist = tied(%hash)->slotlist($i);
+      @ordered_vals = tied(%hash)->vals();
 
+      $num_vals = tied(%hash)->size;
       $num_vals = tied(%hash)->consolidate;
 
       ($newRef,$newThm) = tied(%hash)->clone();
-      $newThm = tied(%hash)->copy(tied(%new));
+      $newThm = tied(%hash)->copy(tied(%new),@optionalext);
 
       All of the above methods can be accessed as:
 
@@ -59,7 +63,7 @@ DESCRIPTION
     for that value.
 
     WARNING: multiple key values supplied as an ARRAY to STORE and DELETE
-    operations are passed by Perl as a single string separated by the $;
+    operations are passed by Perl as a single string separated by Perl's $;
     multidimensional array seperator. i.e.
 
             $hash{'a','b','c'} = $something;
@@ -82,12 +86,14 @@ DESCRIPTION
 
     The ARRAY_REF construct is ALWAYS safe.
 
-    * $thm = tie %hash,'Tie::Hash::MultiKey';
+    * $thm = tie %hash,'Tie::Hash::MultiKey' ,%optional_ex
         Ties a %hash to this package for enhanced capability and returns a
         method pointer.
 
           my %hash;
           my $thm = tie %hash,'Tie::Hash::MultiKey';
+
+        Extension of this module is discussed in detail below.
 
     * $thm = tied %hash;
         Returns a method pointer for this package.
@@ -96,7 +102,25 @@ DESCRIPTION
         Breaks the binding between a variable and this package. There is no
         affect if the variable is not tied.
 
-    * ($href,$thm) = new Tie::Hash::MultiKey;
+        REMEMBER that if you have created a reference to the tied hash,
+        untie will not work until that binding is broken. This means that
+        the object will not be destroyed or garbage collected and the memory
+        will not be reclaimed.
+
+        i.e WRONG
+
+          $thm = tie %h, 'Tie::Hash::MultiKey';
+          ... code ...
+          untie %h;
+
+                RIGHT
+
+          $thm = tie %h, 'Tie::Hash::MultiKey';
+          ... code ...
+          undef $thm;
+          untie %h;
+
+    * ($href,$thm) = new 'Tie::Hash::MultiKey' ,%optional_ex
         This method returns an UNBLESSED reference to an anonymous tied
         %hash.
 
@@ -126,6 +150,7 @@ DESCRIPTION
         Arguments may be a single SCALAR, ARRAY, or ARRAY_REF
 
     * $val = ->remove('key');
+    * $val = ->delkey('key'); alias for above
         Remove one or more keys from the shared key group for a particular
         value If this operation removes the LAST key, then it performs a
         DELETE which is the same as:
@@ -172,12 +197,19 @@ DESCRIPTION
         %hash. If there is no key in the specified slot, an undef is
         returned for that position.
 
+    * $thm->size;
+        Returns the number of ITEMS in the hash (not the number of keys).
+        Should be faster than ... scalar @values
+
     * $thm->consolidate;
         USE WITH CAUTION
 
         Consolidate all keys with the same values into common groups.
 
           returns: number of consolidated key groups
+
+    @ordered_vals = $thm->vals();
+        Return a list of values in the order they were added.
 
     * ($href,$thm) = $thm->clone();
         This method returns an UNBLESSED reference to an anonymous tied
@@ -331,6 +363,220 @@ LIMITATIONS
 
     NOTE: when assigning TO the hash, keys may be ARRAY_REF's as described
     above.
+
+Extension of this module
+    This module has extension capabilities that allow adding features to the
+    characteristics of the elements within the tied hash. For example,
+    knowing the order that items in the hash are accessed as in a cache
+    where older items are timed out and removed from the cache.
+
+    The extensions can be customized to a particular instance of a tied
+    object. This means that extensions can be embodied as a new module or as
+    customization within a Perl program for a particular object instance.
+
+    Requirements:
+
+    An extension 6 Required and 7 Optional callback subrefs to support the
+    following operations:
+
+      TIE       O   create the tied object extension
+      FETCH     R   recall value operations
+      STORE     R   save and update operations
+      DELETE    R   delete key set + value operations
+      EXISTS    O   checking to see if key exists
+      NEXT      O   iterative operations (Perl each)
+      COPY      R   hash copy and clone operations
+      CLEAR     R   hash clear operations
+      ADDKEY    O   add a key to existing key set
+      DELKEY    O   delete a key from an existing key set
+      REORDERK  O   operation to re-order the key indices
+                    that tracks the order that keys are
+                    added to the tied hash
+      REORDERV  R   operation to re-order the value indices
+                    for values belonging to unique key sets
+      ...one or more data elements with any key name
+         as required by the extension
+      CONSOLD   O   operation to consolidate keys that
+                    have a common value
+
+      DATAn         any scalar, array_ref, hash_ref
+
+    Usage:
+
+      require Tie::Hash::MultiKey;
+
+      tie %x, 'Tie::Hash::MultiKey',
+            TIE      =>     $subref_tie,
+            FETCH    =>     $subref_fetch,
+            STORE    =>     $subref_store,
+            DELETE   =>     $subref_delete,
+            EXISTS   =>     $subref_exists,
+            NEXT     =>     $subref_next,
+            CLEAR    =>     $subref_clear
+            COPY     =>     $subref_copy,
+            ADDKEY   =>     $subref_addkey,
+            DELKEY   =>     $subref_delkey
+            REORDERK =>     $subref_Korder,
+            REORDERV =>     $subref_Vorder,
+            CONSOLD  =>     $subref_consolidate;
+
+      The extension may also be provisioned as a hash_ref.
+
+    NOTE: about internal re-ordering.
+
+    If the tied object has new keys or key sets added more than 2^48 times,
+    the internal accounting mechanism will re-order the indices to prevent
+    the pointers from converting from unique integer value to floats.
+    Extensions that are tied either to the order of key addition or values
+    for a key set must correct their associated pointers to match internal
+    re-ordering.
+
+      See:  t/Extension.t for usage and testing examples
+      See:  Tie::Hash::MultiKeyCache for implementation
+
+    The callbacks return the following arguments:
+
+            $sub___tie->($self)
+            $sub_clear->($self)
+
+      A pointer to pre-extension blessed tied hash object
+
+      IMPORTANT: add extension storage to
+
+            $self->[16] and beyond
+     -
+            $sub_fetch->($self,$key,$valueindex)
+            $sub__next->($self,$key,$valueindex)
+
+      next is called ONLY if the key exists and
+      is immediately followed by a call to the internal
+      FETCH method. Normally no action should be done.
+
+      A pointer to the the tied hash object
+      The original key used for the call to fetch
+      The internal value index hash key
+
+    NOTE: the primary key hash $self->[0] must not be touched by the
+    $sub_next extension or it will mess up the Perl iterator.
+
+     -
+            $sub_store->($self,\@keys,$valueindex)
+
+      A pointer to the tied hash object
+      A pointer to an array of the keys for the store
+      The internal value index hash pointer
+     -
+            $sub_delete->($self,$kp,$vp)
+
+      A pointer to the tied hash object
+      A pointer to an ordered array of the deleted keys
+      A pointer to an ordered array of the deleted values
+     -
+            $sub_exists->($self,$key)
+
+      exists is called ONLY if the key exists;
+
+      A pointer to the the tied hash object
+      The original key used for the operation
+     -
+
+            $sub_addkey->($self,$key,$valueindex,\@newkeys)
+
+      A pointer to the tied hash object
+      The reference key used to identify the key set
+      The internal value index for key set
+      A list of new keys added
+     -
+
+            $sub_delkey->($self,$key,$vi)
+
+      A pointer to the tied hash object
+      The value of the key being deleted
+      The internal value index for the key set
+      else false
+
+    Calls extension_sub_delete if the key is the last key of a key set.
+
+     -
+            $sub_copy->($self,$copy,\@valueindex)
+
+      A pointer to the tied hash object
+      A pointer to the tied hash copy object
+      A pointer to an array internal value index keys
+     -
+            $sub_Korder->{$self,\%reorderK)
+
+      A pointer to the tied hash object
+      A pointer to a hash of the reorder
+      key order transfomation
+
+            key => new_order_value
+     -
+            $sub_Vorder->($self,\%reorderV)
+
+      A pointer to the tied hash object
+      A pointer to a hash of the reorder to
+            value hash transformation
+
+            old_order => new_ord
+
+     -
+            $sub_consolidate->($self,\%kbo,\%ko,\%n2o)
+
+      A pointer to the tied hash object
+      A pointer to a hash as consolidated of
+            value => [keys]
+      A pointer to hash as consolidated of 
+            keys => order
+      A pointer to hash of
+            new vi => [old vi order]
+      %n2o is a map of new value indices after
+      consolidation to an array of old value
+      indices. i.e. if there were tow values
+      belonging to different key sets then there
+      would be two vi's in the old order array
+      represented by the single vi key.
+     -
+
+    The internal structure of the tied hash object is as follows:
+
+    [
+
+     0  =>  {       # $kh
+            key     => vi     # value index for 1 & 2 below
+            },
+     1  =>  {       # $vh
+            vi      => value, # contains value for the key set
+            },
+     2  =>  {       # $sh   pointer to hash list keys in a key set
+            vi      = {key1 => order1, key2 => order2, ...},
+            },
+     3  =>  vi,     # numeric value of next value index
+     4  =>  or,     # numeric value of next key order
+     5  =>  crumbs  # STORE key value
+     6  =>  reserved
+     7  =>  {       # extensions
+       FETCH    => subref,  # required
+       STORE    => subref,  # required
+       DELETE   => subref,  # required
+       COPY     => subref,  # required
+       CLEAR    => subref,  # required
+       REORDERV => subref,  # required
+       TIE      => subref,  # optional
+       EXISTS   => subref,  # optional
+       NEXT     => subref,  # optional
+       ADDKEY   => subref,  # optional
+       DELKEY   => subref,  # optional
+       REORDERK => subref,  # optional
+       CONSOLD  => subref, # optional
+     ... one or more data keys
+       DATAn     => scalar, array_ref, hash_ref
+     }
+    ];
+
+    Extension writers should store new information in the indices 16 and up.
+
+    Developers of extensions are encouraged to read the code.
 
 AUTHOR
     Michael Robinton, <miker@cpan.org>

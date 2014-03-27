@@ -1,17 +1,17 @@
 
-# add_store_array.t
+# size.t
 
 BEGIN { $| = 1; print "1..7\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
+#use diagnostics;
 use Data::Dumper::Sorted;
 
-if ($0 =~ m|/E|) { # see if I am an extension test
+if ($0 =~ m|/E|) { # see if I am an extension test     
   $package = 'Tie::Hash::MultiKey::ExtensionPrototype';
 } else {
   $package = 'Tie::Hash::MultiKey';
 }
-
 eval "require $package";
 
 $loaded = 1;
@@ -79,6 +79,7 @@ sub normalize {
   rebuild($self);
   scalar $dd->DumperA($self);
 }
+
 my %h;
 tie %h, $package;
 
@@ -97,52 +98,119 @@ print "got: $got\nexp: $exp\nnot "
 	unless $got eq $exp;
 &ok;
 
-# test 3	add element		"STORE"
-my $gotadd = $h{'foo'} = 'baz';
-$exp = q|9	= bless([{
-		'foo'	=> 0,
-	},
-{
-		'0'	=> 'baz',
-	},
-{
-		'0'	=> {
-			'foo'	=> 0,
-		},
-	},
-1,1,], '|. $package .q|');
-|;
-$exp = normalize($exp);
-$got = $dd->DumperA(tied %h);  
-$got = normalize($exp);
-print "got: $got\nexp: $exp\nnot "
-        unless $got eq $exp;
-&ok;
+# test 3	add elements		"STORE"
+$h{['foo','bar']} = 'baz';
+$h{qw(ding dang dong)} = 'dud';
+$h{'x'} = 'y';
+$h{qw(quick quack quark)} = 'que';
+$h{qw(manny moe jack)} = 'stooges';
 
-# test 4	add more keys to foo	"&addkey"
-$exp = 'baz';
-$got = tied(%h)->addkey(qw(bar buz foo));
-print "got: $got, exp: $exp\nnot "
-	unless $got && $got eq $exp;
-&ok;
-
-# test 5	check that values are actually their
-$exp = q|14	= bless([{
+$exp = q|40	= bless([{
 		'bar'	=> 0,
-		'buz'	=> 0,
+		'dang'	=> 1,
+		'ding'	=> 1,
+		'dong'	=> 1,
 		'foo'	=> 0,
+		'jack'	=> 4,
+		'manny'	=> 4,
+		'moe'	=> 4,
+		'quack'	=> 3,
+		'quark'	=> 3,
+		'quick'	=> 3,
+		'x'	=> 2,
 	},
 {
 		'0'	=> 'baz',
+		'1'	=> 'dud',
+		'2'	=> 'y',
+		'3'	=> 'que',
+		'4'	=> 'stooges',
 	},
 {
 		'0'	=> {
 			'bar'	=> 1,
-			'buz'	=> 2,
 			'foo'	=> 0,
 		},
+		'1'	=> {
+			'dang'	=> 3,
+			'ding'	=> 2,
+			'dong'	=> 4,
+		},
+		'2'	=> {
+			'x'	=> 5,
+		},
+		'3'	=> {
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
+		},
+		'4'	=> {
+			'jack'	=> 11,
+			'manny'	=> 9,
+			'moe'	=> 10,
+		},
 	},
-1,3,undef,], '|. $package .q|');
+5,12,'mannymoejack',], '|. $package .q|');
+|;
+$exp = normalize($exp);
+$got = $dd->DumperA(tied %h);  
+$got = normalize($got);
+print "got: $got\nexp: $exp\nnot "
+        unless $got eq $exp;
+&ok;
+
+# test 4	get size
+$exp = 5;
+$got = (tied %h)->size;
+print "got: $got, exp: $exp\nnot "
+	unless $got == $exp;
+&ok;
+
+# test 5	delete element
+$exp = 'stooges';
+$got = delete $h{moe};
+print "got: $got, exp: $exp\nnot "
+	unless $got eq $exp;
+&ok;
+
+# test 6	check for deletions
+$exp = q|32	= bless([{
+		'bar'	=> 0,
+		'dang'	=> 1,
+		'ding'	=> 1,
+		'dong'	=> 1,
+		'foo'	=> 0,
+		'quack'	=> 3,
+		'quark'	=> 3,
+		'quick'	=> 3,
+		'x'	=> 2,
+	},
+{
+		'0'	=> 'baz',
+		'1'	=> 'dud',
+		'2'	=> 'y',
+		'3'	=> 'que',
+	},
+{
+		'0'	=> {
+			'bar'	=> 1,
+			'foo'	=> 0,
+		},
+		'1'	=> {
+			'dang'	=> 3,
+			'ding'	=> 2,
+			'dong'	=> 4,
+		},
+		'2'	=> {
+			'x'	=> 5,
+		},
+		'3'	=> {
+			'quack'	=> 7,
+			'quark'	=> 8,
+			'quick'	=> 6,
+		},
+	},
+5,12,undef,], '|. $package .q|');
 |;
 $exp = normalize($exp);
 $got = $dd->DumperA(tied %h);
@@ -151,19 +219,9 @@ print "got: $got\nexp: $exp\nnot "
         unless $got eq $exp;
 &ok;
 
-# test 6	bad addkey
-$exp = q|key 'not_there' does not exist
-|;
-eval {
-	tied(%h)->addkey(qw(once upon a time not_there));
-};
-($got = $@) =~ s/\s+at.*//;
-print "got: $got\nexp: $exp\nnot "
-	unless $got eq $exp;
-&ok;
-
-# see test 3
-# test 7	check that store returned stored value
-print "got: $gotadd, exp: baz\nnot "
-	unless $gotadd eq 'baz';
+# test 7	recheck size
+$exp = 4;
+$got = (tied %h)->size;
+print "got: $got, exp: $exp\nnot "
+	unless $got == $exp;
 &ok;

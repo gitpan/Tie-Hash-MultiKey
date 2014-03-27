@@ -2,6 +2,7 @@ Makefile
 Makefile.old
 Template/Makefile
 Template/Makefile.old
+test.pl
 ~$
 blib
 tmp
